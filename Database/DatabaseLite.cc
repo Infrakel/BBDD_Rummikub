@@ -7,7 +7,7 @@ namespace {
         return 0 == strlen(value) ? nullptr : value;
     }
 
-    char* valueToString(char* value) {
+    char* valueToString(const char* value) {
         return value ? value : "NULL";
     }
 }
@@ -73,8 +73,7 @@ int Database::GetTables(char** tables, int max_tables)
     int table_count = 0;
     while (sqlite3_step(statement) == SQLITE_ROW && table_count < max_tables) {
         const char* name = (const char*)sqlite3_column_text(statement, 0);
-        tables[table_count] = new char[strlen(name) + 1];
-        strcpy(tables[table_count], name);
+        tables[table_count] = strdup(name);
         table_count++;
     }
 
@@ -119,8 +118,7 @@ int Database::GetTableData(const char* table_name, char** column_names, char*** 
     // Column names
     for (int i = 0; i < column_count; i++) {
         const char* name = sqlite3_column_name(statement, i);
-        column_names[i] = (char*)malloc(strlen(name) + 1);
-        strcpy(column_names[i], name);
+        column_names[i] = strdup(name);
     }
 
     //get data row by row
@@ -130,13 +128,7 @@ int Database::GetTableData(const char* table_name, char** column_names, char*** 
         for (int i = 0; i < column_count; i++) {
             // returns nullptr for NULL values
             const char* value = (const char*)sqlite3_column_text(statement, i);
-            if (value == nullptr) {
-                data[row_count][i] = (char*)malloc(5);
-                strcpy(data[row_count][i], "NULL");
-            } else {
-                data[row_count][i] = (char*)malloc(strlen(value) + 1);
-                strcpy(data[row_count][i], value);
-            }
+            data[row_count][i] = strdup(valueToString(value));
         }
         row_count++;
     }
@@ -147,38 +139,30 @@ int Database::GetTableData(const char* table_name, char** column_names, char*** 
 }
 
 // Know how many "filas" we have on each table
-int Database::GetTableRowCount(const char* table_name)
-{
+int Database::GetTableRowCount(const char* table_name) {
     if (!IsConnected()) {
         std::cerr << "[ERROR] Database is not connected!" << std::endl;
         return 0;
     }
 
+    //prepare statement
     char query[512];
-
-    sprintf_s(
-        query,
-        "SELECT COUNT(*) FROM `%s`",
-        table_name
-    );
-
+    sprintf_s(query, "SELECT COUNT(*) FROM `%s`", table_name);
     sqlite3_stmt* statement = nullptr;
-
-    if (sqlite3_prepare_v2(connection, query, -1, &statement, nullptr) != SQLITE_OK) {
-        std::cerr << "[ERROR] Could not count rows: " << sqlite3_errmsg(connection) << std::endl;
-
+    if (sqlite3_prepare_v2(connection, query, -1, &statement, nullptr) !=
+        SQLITE_OK) {
+        std::cerr << "[ERROR] Could not count rows: "
+                  << sqlite3_errmsg(connection) << std::endl;
         return 0;
     }
 
+    //execute statement
     int row_count = 0;
-
     if (sqlite3_step(statement) == SQLITE_ROW) {
-        // SQLite can give the value directly as int, no atoi needed
         row_count = sqlite3_column_int(statement, 0);
     }
 
     sqlite3_finalize(statement);
-
     return row_count;
 }
 
@@ -265,7 +249,7 @@ bool Database::InsertRow(char* table_name, ColumnInfo columns[], char values[][2
     for (int i = 0; i < column_count; i++) {
         //normalizes empty strings to NULL values
         char *value = stringToValue(values[i]);
-        std::cout << columns[i].name << "(" << columns[i].type << "): " << (value ? value : "NULL") << std::endl;
+        std::cout << columns[i].name << "(" << columns[i].type << "): " << valueToString(values[i]) << std::endl;
         sqlite3_bind_text(statement, i+1, value, -1, nullptr);
     }
 
@@ -318,7 +302,7 @@ bool Database::UpdateRow(char* table_name, ColumnInfo columns[], char values[][2
     for (i = 0; i < column_count; i++) {
         //normalizes empty strings to NULL values
         char *value = stringToValue(values[i]);
-        std::cout << columns[i].name << "(" << columns[i].type << "): " << (value ? value : "NULL") << std::endl;
+        std::cout << columns[i].name << "(" << columns[i].type << "): " << valueToString(values[i]) << std::endl;
         sqlite3_bind_text(statement, i+1, value, -1, nullptr);
     }
     //bind id in WHERE clause
@@ -395,8 +379,7 @@ int Database::GetFreestyleData(const char* query, char** column_names, char*** d
     //columns
     for (int i = 0; i < column_count; i++) {
         const char* name = sqlite3_column_name(statement, i);
-        column_names[i] = (char*)malloc(strlen(name) + 1);
-        strcpy(column_names[i], name);
+        column_names[i] = strdup(name);
     }
 
     //values
@@ -405,13 +388,7 @@ int Database::GetFreestyleData(const char* query, char** column_names, char*** d
         data[row_count] = (char**)malloc(sizeof(char*) * column_count);
         for (int i = 0; i < column_count; i++) {
             const char* value = (const char*)sqlite3_column_text(statement, i);
-            if (value == nullptr) {
-                data[row_count][i] = (char*)malloc(5);
-                strcpy(data[row_count][i], "NULL");
-            } else {
-                data[row_count][i] = (char*)malloc(strlen(value) + 1);
-                strcpy(data[row_count][i], value);
-            }
+            data[row_count][i] = strdup(valueToString(value));
         }
         row_count++;
     }
