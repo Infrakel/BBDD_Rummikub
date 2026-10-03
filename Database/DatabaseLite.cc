@@ -208,8 +208,8 @@ int Database::GetTableColumns(
 }
 
 bool Database::InsertRow(char* table_name, ColumnInfo columns[], char values[][256], int column_count) {
+    // prepare query
     char query[2048];
-
     sprintf_s(query, "INSERT INTO `%s` ", table_name);
 
     // column names
@@ -219,7 +219,6 @@ bool Database::InsertRow(char* table_name, ColumnInfo columns[], char values[][2
         strcat_s(query, "`");
         strcat_s(query, columns[i].name);
         strcat_s(query, "`");
-
         if (i < column_count - 1)
         {
             strcat_s(query, ", ");
@@ -253,9 +252,8 @@ bool Database::InsertRow(char* table_name, ColumnInfo columns[], char values[][2
         sqlite3_bind_text(statement, i+1, value, -1, nullptr);
     }
 
-    // char* expanded_query = sqlite3_expanded_sql(statement);
+    //execute query
     std::cout << "[SQL] " << query << std::endl;
-    
     if (sqlite3_step(statement) != SQLITE_DONE) {
         std::cerr << "[ERROR] Could not insert row: " << sqlite3_errmsg(connection) << std::endl;
         sqlite3_finalize(statement);
