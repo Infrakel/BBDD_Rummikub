@@ -1,3 +1,7 @@
+/*
+    Made it by Andreu Sánchez Castelló
+*/
+
 #include <iostream>
 #include <mysql.h>
 

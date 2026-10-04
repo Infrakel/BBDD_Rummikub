@@ -1,3 +1,7 @@
+/*
+    Made it by Guillermo Martorell Hurtado
+*/
+
 #include <iostream>
 #include "sqlite3.h"
 

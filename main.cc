@@ -1,3 +1,7 @@
+/*
+    Made it by Andreu Sánchez Castelló
+*/
+
 #include <esat/window.h>
 #include <esat/draw.h>
 #include <esat/sprite.h>
