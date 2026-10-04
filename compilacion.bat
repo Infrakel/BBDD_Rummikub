@@ -9,9 +9,10 @@
 
 cl /nologo /Zi /GR- /EHs /MD ^
   %2 ^
-  .\Database\Database.cc ^
+  .\Database\DatabaseLite.cc .\Database\DatabaseMaria.cc ^
   -I %1\Desarrollo\Lib_Graph\ESAT_rev248\include ^
   -I .\MariaDB\include ^
+  -I .\SQLite ^
   -I . ^
   %1\Desarrollo\Lib_Graph\ESAT_rev248\bin\ESAT.lib ^
   .\MariaDB\lib\libmariadb.lib ^

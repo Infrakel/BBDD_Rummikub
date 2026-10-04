@@ -9,6 +9,8 @@
 
 // Our layer class which means the connection to our server
 #include "Database/Database.h"
+#include "Database/DatabaseLite.h"
+#include "Database/DatabaseMaria.h"
 
 // Our interface, we are gonna use ImGui
 #include <esat_extra/imgui.h>
@@ -768,9 +770,53 @@ void DrawStructure(Database& db, int table_count, char* tables[])
     ImGui::End();
 }
 
+std::unique_ptr<Database> SelectDatabase()
+{
+    std::cout << "Select a database provider:\n"
+            << "  [1] SQLite\n"
+            << "  [2] MariaDB\n"
+            << "  [0] Quit\n"
+            << "> ";
+    std::unique_ptr<Database> database = nullptr;
+    int choice;
+    bool correctInput;
+    bool validOption;
+    do{
+        validOption = true;
+        correctInput = (bool) (std::cin >> choice);
+        if (!correctInput) {
+            std::cin.clear();
+            std::cout << "Please enter a number.\n> ";
+        }
+        else{
+            switch (choice) {
+                case 1: 
+                    database = std::make_unique<SQLiteDatabase>();
+                    break;
+                case 2: 
+                    database = std::make_unique<MariaDBDatabase>();
+                    break;
+                case 0:
+                    database = nullptr;
+                    break;
+                default: 
+                    std::cout << "Invalid option.\n> ";
+                    validOption = false;
+            }
+        }
+        // clear the input buffer
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    }while(!correctInput || !validOption);
+
+    return database;
+}
+
 int esat::main(int argc, char **argv) {
-    
-    Database db;
+    std::unique_ptr<Database> dbptr = SelectDatabase();
+    if(!dbptr){
+        return 0;
+    }
+    Database& db = *dbptr;
     bool isConnected = InitializeDB(&db);
 
     // return error, close all

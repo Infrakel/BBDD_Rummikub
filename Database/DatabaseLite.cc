@@ -12,16 +12,16 @@ namespace {
     }
 }
 
-Database::Database() : connection(nullptr)
+SQLiteDatabase::SQLiteDatabase() : connection(nullptr)
 {
 }
 
-Database::~Database()
+SQLiteDatabase::~SQLiteDatabase()
 {
     Disconnect();
 }
 
-bool Database::Connect()
+bool SQLiteDatabase::Connect()
 {
     // Open the file (relative or absolute path)
     if (sqlite3_open("SQLite/rummi.db", &connection) != SQLITE_OK) {
@@ -35,7 +35,7 @@ bool Database::Connect()
     return true;
 }
 
-void Database::Disconnect()
+void SQLiteDatabase::Disconnect()
 {
     // Check if connection is already available
     if (connection != nullptr) {
@@ -44,12 +44,12 @@ void Database::Disconnect()
     }
 }
 
-bool Database::IsConnected() const
+bool SQLiteDatabase::IsConnected() const
 {
     return connection != nullptr;
 }
 
-int Database::GetTables(char** tables, int max_tables)
+int SQLiteDatabase::GetTables(char** tables, int max_tables)
 {
     if (!IsConnected()) {
         std::cerr << "[ERROR] Database is not connected!" << std::endl;
@@ -82,7 +82,7 @@ int Database::GetTables(char** tables, int max_tables)
     return table_count;
 }
 
-int Database::GetTableData(const char* table_name, char** column_names, char*** data, int max_rows, int max_columns, int offset, int& column_count) {
+int SQLiteDatabase::GetTableData(const char* table_name, char** column_names, char*** data, int max_rows, int max_columns, int offset, int& column_count) {
 
     if (!IsConnected()) {
         std::cerr << "[ERROR] Database is not connected!" << std::endl;
@@ -139,7 +139,7 @@ int Database::GetTableData(const char* table_name, char** column_names, char*** 
 }
 
 // Know how many "filas" we have on each table
-int Database::GetTableRowCount(const char* table_name) {
+int SQLiteDatabase::GetTableRowCount(const char* table_name) {
     if (!IsConnected()) {
         std::cerr << "[ERROR] Database is not connected!" << std::endl;
         return 0;
@@ -166,7 +166,7 @@ int Database::GetTableRowCount(const char* table_name) {
     return row_count;
 }
 
-int Database::GetTableColumns(
+int SQLiteDatabase::GetTableColumns(
     char* table_name,
     ColumnInfo columns[],
     int max_columns)
@@ -207,7 +207,7 @@ int Database::GetTableColumns(
     return column_count;
 }
 
-bool Database::InsertRow(char* table_name, ColumnInfo columns[], char values[][256], int column_count) {
+bool SQLiteDatabase::InsertRow(char* table_name, ColumnInfo columns[], char values[][256], int column_count) {
     // prepare query
     char query[2048];
     sprintf_s(query, "INSERT INTO `%s` ", table_name);
@@ -266,7 +266,7 @@ bool Database::InsertRow(char* table_name, ColumnInfo columns[], char values[][2
     return true;
 }
 
-bool Database::UpdateRow(char* table_name, ColumnInfo columns[], char values[][256], int column_count) {
+bool SQLiteDatabase::UpdateRow(char* table_name, ColumnInfo columns[], char values[][256], int column_count) {
 
     //prepare query
     char query[2048];
@@ -319,7 +319,7 @@ bool Database::UpdateRow(char* table_name, ColumnInfo columns[], char values[][2
     return true;
 }
 
-bool Database::DeleteRow(char* table_name, char* primary_key, char* primary_key_value) {
+bool SQLiteDatabase::DeleteRow(char* table_name, char* primary_key, char* primary_key_value) {
 
     if (!IsConnected()) {
         std::cerr << "[ERROR] Database is not connected!" << std::endl;
@@ -352,7 +352,7 @@ bool Database::DeleteRow(char* table_name, char* primary_key, char* primary_key_
     return true;
 }
 
-int Database::GetFreestyleData(const char* query, char** column_names, char*** data, int max_rows, int max_columns, int& column_count) {
+int SQLiteDatabase::GetFreestyleData(const char* query, char** column_names, char*** data, int max_rows, int max_columns, int& column_count) {
 
     if (!IsConnected()) {
         std::cerr << "[ERROR] Database is not connected!" << std::endl;
