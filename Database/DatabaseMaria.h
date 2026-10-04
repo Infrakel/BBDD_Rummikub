@@ -1,19 +1,16 @@
-/*
-    Made it by Guillermo Martorell Hurtado
-*/
-
 #pragma once
 
 #include "Database.h"
-#include <sqlite3.h>
+#include <mysql.h>
+
 
 // I know we doesn't make classes yet, but i think i need to have this to make sure the
 // structure we want to have on the database layer
-class SQLiteDatabase : public Database 
+class MariaDBDatabase : public Database 
 {
     public:
-        SQLiteDatabase();
-        ~SQLiteDatabase();
+        MariaDBDatabase();
+        ~MariaDBDatabase();
         bool Connect() override;
         void Disconnect() override;
         bool IsConnected() const override;
@@ -26,5 +23,6 @@ class SQLiteDatabase : public Database
         bool DeleteRow(char* table_name, char* primary_key, char* primary_key_value) override;
         int GetFreestyleData(const char* query, char** column_names, char*** data, int max_rows, int max_columns, int& column_count) override;
     private:
-        sqlite3* connection;
+        MYSQL* connection_mysql;
+
 };
