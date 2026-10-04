@@ -777,8 +777,8 @@ void DrawStructure(Database& db, int table_count, char* tables[])
 std::unique_ptr<Database> SelectDatabase()
 {
     std::cout << "Select a database provider:\n"
-            << "  [1] SQLite\n"
-            << "  [2] MariaDB\n"
+            << "  [1] MariaDB\n"
+            << "  [2] SQLite\n"
             << "  [0] Quit\n"
             << "> ";
     std::unique_ptr<Database> database = nullptr;
@@ -795,10 +795,10 @@ std::unique_ptr<Database> SelectDatabase()
         else{
             switch (choice) {
                 case 1: 
-                    database = std::make_unique<SQLiteDatabase>();
+                    database = std::make_unique<MariaDBDatabase>();
                     break;
                 case 2: 
-                    database = std::make_unique<MariaDBDatabase>();
+                    database = std::make_unique<SQLiteDatabase>();
                     break;
                 case 0:
                     database = nullptr;
