@@ -778,7 +778,7 @@ std::unique_ptr<Database> SelectDatabase()
 {
     std::cout << "Select a database provider:\n"
             << "  [1] MariaDB\n"
-            << "  [2] SQLite\n"
+            << "  [2] SQLite (./SQLite/rummi.db)\n"
             << "  [0] Quit\n"
             << "> ";
     std::unique_ptr<Database> database = nullptr;
