@@ -1,3 +1,7 @@
+/*
+    Made it by Andreu Sánchez Castelló
+*/
+
 #include "Database.h"
 #include <iostream>
 

@@ -1,3 +1,7 @@
+/*
+    Made it by Guillermo Martorell Hurtado
+*/
+
 #include <esat/window.h>
 #include <esat/draw.h>
 #include <esat/sprite.h>

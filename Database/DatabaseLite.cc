@@ -1,3 +1,7 @@
+/*
+    Made it by Guillermo Martorell Hurtado
+*/
+
 #include "DatabaseLite.h"
 #include <iostream>
 #include <sqlite3.h>

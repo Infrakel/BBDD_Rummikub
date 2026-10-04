@@ -1,3 +1,7 @@
+/*
+    Made it by Andreu Sánchez Castelló
+*/
+
 #pragma once
 
 #include <mysql.h>
