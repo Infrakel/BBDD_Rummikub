@@ -1,20 +1,21 @@
-/*
-    Made it by Guillermo Martorell Hurtado
-*/
+/**
+ * @file connectionLite.cc
+ * @author Guillermo Martorell (martorellhu@esat-alumni.com)
+ * @brief Tests connection to SQLite database
+ */
 
 #include <iostream>
+
 #include "sqlite3.h"
 
-int main()
-{
+int main() {
     sqlite3* db = nullptr;
 
     // Open the file (relative or absolute path)
     if (sqlite3_open("SQLite/rummi.db", &db) != SQLITE_OK) {
         std::cerr << "Can't open DB: " << sqlite3_errmsg(db) << "\n";
         return 1;
-    }
-    else{
+    } else {
         std::cout << "Opened!" << std::endl;
     }
 
@@ -37,7 +38,7 @@ int main()
     }
 
     sqlite3_finalize(statement);  // always finalize statements
-    sqlite3_close(db);       // then close the connection
+    sqlite3_close(db);            // then close the connection
 
     return 0;
 }

@@ -1,12 +1,14 @@
-/*
-    Made it by Andreu Sánchez Castelló
-*/
+/**
+ * @file connection.cc
+ * @author Andreu Sánchez Castelló (sanchezcas@esat-alumni.com)
+ * @brief Tests connection to MariaDB database
+ */
 
-#include <iostream>
 #include <mysql.h>
 
-int main()
-{
+#include <iostream>
+
+int main() {
     std::cout << "[1] Initializing MariaDB..." << std::endl;
 
     MYSQL* connection = mysql_init(nullptr);
@@ -21,12 +23,10 @@ int main()
     // Issue with the TLS connection, need to desactivate
     my_bool verify = 0;
 
-    if (mysql_optionsv(
-        connection,
-        MYSQL_OPT_SSL_VERIFY_SERVER_CERT,
-        &verify
-    ) != 0) {
-        std::cerr << "[ERROR] Cant download server verification to SSL." << std::endl;
+    if (mysql_optionsv(connection, MYSQL_OPT_SSL_VERIFY_SERVER_CERT, &verify) !=
+        0) {
+        std::cerr << "[ERROR] Cant download server verification to SSL."
+                  << std::endl;
 
         mysql_close(connection);
         return 1;
@@ -34,16 +34,9 @@ int main()
 
     std::cout << "[3] Verification SSL desactivate." << std::endl;
 
-    if (mysql_real_connect(
-        connection,
-        "194.164.171.36",
-        "andreu",
-        "~v6ZRF13vpqlsx@l",
-        "practica-rummi",
-        3306,
-        nullptr,
-        0
-    ) == nullptr) {
+    if (mysql_real_connect(connection, "194.164.171.36", "andreu",
+                           "~v6ZRF13vpqlsx@l", "practica-rummi", 3306, nullptr,
+                           0) == nullptr) {
         std::cerr << "[ERROR] Connection fails:" << std::endl;
 
         std::cerr << "        " << mysql_error(connection) << std::endl;
@@ -54,12 +47,12 @@ int main()
 
     std::cout << "[4] THIS IS WORKING!" << std::endl;
 
-    std::cout << "[5] MariaDB: " << mysql_get_server_info(connection) << std::endl;
+    std::cout << "[5] MariaDB: " << mysql_get_server_info(connection)
+              << std::endl;
 
     std::cout << "\n[6] Tables from practica-rummi database:" << std::endl;
 
-    if (mysql_query(connection, "SHOW TABLES") != 0)
-    {
+    if (mysql_query(connection, "SHOW TABLES") != 0) {
         std::cerr << "[ERROR] SHOW TABLES fails:" << std::endl;
 
         std::cerr << "        " << mysql_error(connection) << std::endl;
