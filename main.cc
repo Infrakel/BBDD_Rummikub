@@ -573,16 +573,15 @@ void DrawStructure(Database& db, int table_count, char* tables[]) {
 /**
  * @brief Database provider selector
  *
- * @return std::unique_ptr<Database> smart pointer to database object
+ * @return `int` menu choice, ensures valid option is chosen
  */
-std::unique_ptr<Database> SelectDatabase() {
+int SelectDatabase() {
     std::cout << "Select a database provider:\n"
               << "  [1] MariaDB\n"
               << "  [2] SQLite (./SQLite/rummi.db)\n"
               << "  [0] Quit\n"
               << "> ";
 
-    std::unique_ptr<Database> database = nullptr;
     int choice;
     bool correctInput;
     bool validOption;
@@ -592,37 +591,33 @@ std::unique_ptr<Database> SelectDatabase() {
         if (!correctInput) {
             std::cin.clear();  // clears cin bit flags
             std::cout << "Please enter a number.\n> ";
-        } else {
-            switch (choice) {
-                case 1:
-                    database = std::make_unique<MariaDBDatabase>();
-                    break;
-                case 2:
-                    database = std::make_unique<SQLiteDatabase>();
-                    break;
-                case 0:
-                    database = nullptr;
-                    break;
-                default:
-                    std::cout << "Invalid option.\n> ";
-                    validOption = false;
-            }
+        } else if (choice < 0 || choice > 2) {
+            std::cout << "Invalid option.\n> ";
+            validOption = false;
         }
         // clear the input buffer (ignores rest of tokens)
         std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     } while (!correctInput || !validOption);
 
-    return database;
+    return choice;
 }
 
 int esat::main(int argc, char** argv) {
     // Database selection
-    std::unique_ptr<Database> dbptr = SelectDatabase();
-    if (!dbptr) {
-        return 0;
+    int databaseSelection = SelectDatabase();
+    Database* dbptr;
+    switch (databaseSelection) {
+        case 1:
+            dbptr = new MariaDBDatabase();
+            break;
+        case 2:
+            dbptr = new SQLiteDatabase();
+            break;
+        case 0:
+            return 0;
     }
-    Database& db = *dbptr;
 
+    Database& db = *dbptr;
     bool isConnected = InitializeDB(&db);
 
     // return error, close all
@@ -696,5 +691,6 @@ int esat::main(int argc, char** argv) {
     }
 
     esat::WindowDestroy();
+    delete dbptr;
     return 0;
 }
