@@ -10,6 +10,7 @@
 #include <esat/time.h>
 #include <esat/window.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include <iostream>
 #include <memory>
@@ -18,6 +19,9 @@
 #include "Database/Database.h"
 #include "Database/DatabaseLite.h"
 #include "Database/DatabaseMaria.h"
+
+// Native file dialog
+#include <nfd.h>
 
 // Our interface, we are gonna use ImGui
 #include <esat_extra/imgui.h>
@@ -570,6 +574,23 @@ void DrawStructure(Database& db, int table_count, char* tables[]) {
     ImGui::End();
 }
 
+char* PickDatabaseFile() {
+    // attempts to get full path. if it fails, returns a null pointer
+    // which tells NFD to let the OS decide the default path
+    char* fullPath = _fullpath(nullptr, ".", _MAX_PATH);
+    nfdchar_t* outPath = nullptr;
+    nfdresult_t result = NFD_OpenDialog("db", fullPath, &outPath);
+    free(fullPath);
+    if (result == NFD_OKAY) {
+        return outPath;
+    } else if (result == NFD_CANCEL) {
+        return nullptr;
+    } else {
+        printf("Error: %s\n", NFD_GetError());
+        return nullptr;
+    }
+}
+
 /**
  * @brief Database provider selector
  *
@@ -578,7 +599,7 @@ void DrawStructure(Database& db, int table_count, char* tables[]) {
 int SelectDatabase() {
     std::cout << "Select a database provider:\n"
               << "  [1] MariaDB\n"
-              << "  [2] SQLite (./SQLite/rummi.db)\n"
+              << "  [2] SQLite\n"
               << "  [0] Quit\n"
               << "> ";
 
@@ -604,18 +625,32 @@ int SelectDatabase() {
 
 int esat::main(int argc, char** argv) {
     // Database selection
-    int databaseSelection = SelectDatabase();
     Database* dbptr;
-    switch (databaseSelection) {
-        case 1:
-            dbptr = new MariaDBDatabase();
-            break;
-        case 2:
-            dbptr = new SQLiteDatabase();
-            break;
-        case 0:
-            return 0;
-    }
+    char* sqlitePath;
+    int menuSelection;
+    bool valid = true;
+    do {
+        menuSelection = SelectDatabase();
+        switch (menuSelection) {
+            // sets up MariaDB connection
+            case 1:
+                dbptr = new MariaDBDatabase();
+                break;
+            // sets up sqlitePath, with a file picker
+            case 2:
+                sqlitePath = PickDatabaseFile();
+                if (sqlitePath) {
+                    dbptr = new SQLiteDatabase(sqlitePath);
+                } else {
+                    valid = false;
+                }
+                free(sqlitePath);
+                break;
+            // exits program
+            case 0:
+                return 0;
+        }
+    } while (menuSelection < 0 || menuSelection > 2 || !valid);
 
     Database& db = *dbptr;
     bool isConnected = InitializeDB(&db);

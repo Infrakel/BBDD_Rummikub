@@ -9,10 +9,12 @@
 
 #include <sqlite3.h>
 
+#include <string>
+
 #include "Database.h"
 class SQLiteDatabase : public Database {
    public:
-    SQLiteDatabase();
+    SQLiteDatabase(std::string filePath);
     ~SQLiteDatabase();
     bool Connect() override;
     void Disconnect() override;
@@ -36,4 +38,5 @@ class SQLiteDatabase : public Database {
 
    private:
     sqlite3* connection;
+    std::string filePath;
 };

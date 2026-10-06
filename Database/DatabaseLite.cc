@@ -9,6 +9,7 @@
 #include <sqlite3.h>
 
 #include <iostream>
+#include <string>
 
 namespace {
 char* stringToValue(char* value) {
@@ -18,13 +19,14 @@ char* stringToValue(char* value) {
 char* valueToString(const char* value) { return value ? value : "NULL"; }
 }  // namespace
 
-SQLiteDatabase::SQLiteDatabase() : connection(nullptr) {}
+SQLiteDatabase::SQLiteDatabase(std::string filePath)
+    : connection(nullptr), filePath{filePath} {}
 
 SQLiteDatabase::~SQLiteDatabase() { Disconnect(); }
 
 bool SQLiteDatabase::Connect() {
     // Open the file (relative or absolute path)
-    if (sqlite3_open("SQLite/rummi.db", &connection) != SQLITE_OK) {
+    if (sqlite3_open(filePath.data(), &connection) != SQLITE_OK) {
         std::cerr << "[ERROR] Can't open DB: " << sqlite3_errmsg(connection)
                   << "\n";
         return 1;
