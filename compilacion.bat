@@ -10,10 +10,10 @@
 cl /nologo /Zi /GR- /EHs /MD ^
   %2 ^
   .\Database\DatabaseLite.cc .\Database\DatabaseMaria.cc ^
-  .\NativeFileDialog\nfd_common.c .\NativeFileDialog\nfd_win.cpp ^
+  .\NativeFileDialogExtended\nfd_win.cpp ^
   -I .\MariaDB\include ^
   -I .\SQLite ^
-  -I .\NativeFileDialog\include ^
+  -I .\NativeFileDialogExtended\include ^
   -I %1\Desarrollo\Lib_Graph\ESAT_rev248\include ^
   -I . ^
   %1\Desarrollo\Lib_Graph\ESAT_rev248\bin\ESAT.lib ^

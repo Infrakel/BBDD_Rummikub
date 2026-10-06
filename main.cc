@@ -574,21 +574,33 @@ void DrawStructure(Database& db, int table_count, char* tables[]) {
     ImGui::End();
 }
 
-char* PickDatabaseFile() {
-    // attempts to get full path. if it fails, returns a null pointer
-    // which tells NFD to let the OS decide the default path
-    char* fullPath = _fullpath(nullptr, ".", _MAX_PATH);
-    nfdchar_t* outPath = nullptr;
-    nfdresult_t result = NFD_OpenDialog("db", fullPath, &outPath);
-    free(fullPath);
-    if (result == NFD_OKAY) {
-        return outPath;
-    } else if (result == NFD_CANCEL) {
-        return nullptr;
-    } else {
-        printf("Error: %s\n", NFD_GetError());
+/**
+ * @brief Opens a dialog to select a datbase file from the file system
+ *
+ * @return nfdu8char_t* Full path to the selected file
+ */
+nfdu8char_t* PickDatabaseFile() {
+    if (NFD_Init() != NFD_OKAY) {
         return nullptr;
     }
+    nfdu8char_t* outPath = nullptr;
+    nfdu8filteritem_t filters[1] = {{"Database file", "db"}};
+    nfdopendialogu8args_t args = {0};
+    args.filterList = filters;
+    args.filterCount = 1;
+    args.title = "Select Database File";
+    nfdresult_t result = NFD_OpenDialogU8_With(&outPath, &args);
+    if (result == NFD_OKAY) {
+        std::cout << "Database file selected: " << outPath << std::endl;
+    } else if (result == NFD_CANCEL) {
+        outPath = nullptr;
+    } else {
+        std::cout << "[ERROR] Could not pick file: " << NFD_GetError()
+                  << std::endl;
+        outPath = nullptr;
+    }
+    NFD_Quit();
+    return outPath;
 }
 
 /**
@@ -626,7 +638,7 @@ int SelectDatabase() {
 int esat::main(int argc, char** argv) {
     // Database selection
     Database* dbptr;
-    char* sqlitePath;
+    nfdu8char_t* sqlitePath;
     int menuSelection;
     bool valid = true;
     do {
@@ -640,7 +652,7 @@ int esat::main(int argc, char** argv) {
             case 2:
                 sqlitePath = PickDatabaseFile();
                 if (sqlitePath) {
-                    dbptr = new SQLiteDatabase(sqlitePath);
+                    dbptr = new SQLiteDatabase(strdup(sqlitePath));
                 } else {
                     std::cerr
                         << "[ERROR] Must pick a valid SQLite database file"
@@ -654,7 +666,6 @@ int esat::main(int argc, char** argv) {
                 return 0;
         }
     } while (menuSelection < 0 || menuSelection > 2 || !valid);
-
     Database& db = *dbptr;
     bool isConnected = InitializeDB(&db);
 
