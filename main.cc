@@ -583,12 +583,14 @@ nfdu8char_t* PickDatabaseFile() {
     if (NFD_Init() != NFD_OKAY) {
         return nullptr;
     }
+    char* defaultPath = _fullpath(nullptr, ".", _MAX_PATH);
     nfdu8char_t* outPath = nullptr;
     nfdu8filteritem_t filters[1] = {{"Database file", "db"}};
     nfdopendialogu8args_t args = {0};
     args.filterList = filters;
     args.filterCount = 1;
     args.title = "Select Database File";
+    args.defaultPath = defaultPath;
     nfdresult_t result = NFD_OpenDialogU8_With(&outPath, &args);
     if (result == NFD_OKAY) {
         std::cout << "Database file selected: " << outPath << std::endl;
@@ -642,6 +644,7 @@ int esat::main(int argc, char** argv) {
     int menuSelection;
     bool valid = true;
     do {
+        valid = true;
         menuSelection = SelectDatabase();
         switch (menuSelection) {
             // sets up MariaDB connection
@@ -653,13 +656,13 @@ int esat::main(int argc, char** argv) {
                 sqlitePath = PickDatabaseFile();
                 if (sqlitePath) {
                     dbptr = new SQLiteDatabase(strdup(sqlitePath));
+                    NFD_FreePathU8(sqlitePath);
                 } else {
                     std::cerr
                         << "[ERROR] Must pick a valid SQLite database file"
                         << std::endl;
                     valid = false;
                 }
-                free(sqlitePath);
                 break;
             // exits program
             case 0:
