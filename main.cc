@@ -642,6 +642,9 @@ int esat::main(int argc, char** argv) {
                 if (sqlitePath) {
                     dbptr = new SQLiteDatabase(sqlitePath);
                 } else {
+                    std::cerr
+                        << "[ERROR] Must pick a valid SQLite database file"
+                        << std::endl;
                     valid = false;
                 }
                 free(sqlitePath);

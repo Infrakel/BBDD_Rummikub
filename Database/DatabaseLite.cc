@@ -25,15 +25,27 @@ SQLiteDatabase::SQLiteDatabase(std::string filePath)
 SQLiteDatabase::~SQLiteDatabase() { Disconnect(); }
 
 bool SQLiteDatabase::Connect() {
-    // Open the file (relative or absolute path)
-    if (sqlite3_open(filePath.data(), &connection) != SQLITE_OK) {
+    // Open the file
+    if (sqlite3_open_v2(filePath.data(), &connection, SQLITE_OPEN_READWRITE,
+                        nullptr) != SQLITE_OK) {
         std::cerr << "[ERROR] Can't open DB: " << sqlite3_errmsg(connection)
                   << "\n";
-        return 1;
+        return false;
     } else {
-        std::cout << "Opened!" << std::endl;
+        // sqlite does NOT fail if a non-database file is selected.
+        // therefore we preform a quick check before proceeding
+        char* errMsg;
+        if (sqlite3_exec(connection, "SELECT 1 FROM sqlite_master LIMIT 1;",
+                         nullptr, nullptr, &errMsg) != SQLITE_OK) {
+            std::cerr << "[ERROR] Not a valid database: "
+                      << (errMsg ? errMsg : "unknown") << std::endl;
+            sqlite3_free(errMsg);
+            Disconnect();
+            return false;
+        }
     }
 
+    std::cout << "Opened!" << std::endl;
     return true;
 }
 
