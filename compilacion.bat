@@ -1,14 +1,15 @@
-﻿@REM Compilación y Enlace con biblioteca gráfica.
+﻿@REM Author: Andreu Sánchez
+@REM Compilation script
 @cls
 @echo ---------------------------------------------------
-@echo  ESAT Curso 2025-2026 Asignatura PRG Primero
+@echo  ESAT 2026-2027: Programacion Avanzada
 @echo ---------------------------------------------------
-@echo  Proceso por lotes iniciado.
+@echo  Batch script initiated
 @echo ---------------------------------------------------
 @echo off
 
 cl /nologo /Zi /GR- /EHs /MD ^
-  %2 ^
+  %1 ^
   .\Database\DatabaseLite.cc .\Database\DatabaseMaria.cc ^
   .\NativeFileDialogExtended\nfd_win.cpp ^
   -I .\MariaDB\include ^
@@ -20,9 +21,6 @@ cl /nologo /Zi /GR- /EHs /MD ^
   .\MariaDB\lib\libmariadb.lib ^
   opengl32.lib user32.lib gdi32.lib shell32.lib Ws2_32.lib comctl32.lib ole32.lib
 
-@REM We need to include this copy, for work with the x86 binary
-copy /Y ".\MariaDB\lib\libmariadb.dll" "."
-
 @echo ---------------------------------------------------
-@echo  Proceso por lotes finalizado.
+@echo  Batch script finished
 @echo ---------------------------------------------------
