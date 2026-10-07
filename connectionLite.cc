@@ -19,8 +19,9 @@ int main() {
         std::cout << "Opened!" << std::endl;
     }
 
-    // Prepared statement with a bound parameter
-    const char* sql = "SELECT COUNT(*) FROM campeonatos;";
+    const char* sql =
+        "SELECT COUNT(name) FROM sqlite_master "
+        "WHERE type = 'table' AND name NOT LIKE 'sqlite_%'";
     sqlite3_stmt* statement = nullptr;
 
     if (sqlite3_prepare_v2(db, sql, -1, &statement, nullptr) != SQLITE_OK) {
@@ -29,16 +30,14 @@ int main() {
         return 1;
     }
 
-    // sqlite3_bind_int(stmt, 1, 0);  // first '?' = 0
-
     while (sqlite3_step(statement) == SQLITE_ROW) {
         int count = sqlite3_column_int(statement, 0);
         // const unsigned char* name = sqlite3_column_text(statement, 1);
-        std::cout << "Count of campeonatos: " << count << "\n";
+        std::cout << "Database has " << count << " tables\n";
     }
 
-    sqlite3_finalize(statement);  // always finalize statements
-    sqlite3_close(db);            // then close the connection
+    sqlite3_finalize(statement);
+    sqlite3_close(db);
 
     return 0;
 }
