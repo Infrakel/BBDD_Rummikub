@@ -1,25 +1,27 @@
-/*
-    Made it by Guillermo Martorell Hurtado
-*/
+/**
+ * @file connectionLite.cc
+ * @author Guillermo Martorell (martorellhu@esat-alumni.com)
+ * @brief Tests connection to SQLite database
+ */
 
 #include <iostream>
+
 #include "sqlite3.h"
 
-int main()
-{
+int main() {
     sqlite3* db = nullptr;
 
     // Open the file (relative or absolute path)
     if (sqlite3_open("SQLite/rummi.db", &db) != SQLITE_OK) {
         std::cerr << "Can't open DB: " << sqlite3_errmsg(db) << "\n";
         return 1;
-    }
-    else{
+    } else {
         std::cout << "Opened!" << std::endl;
     }
 
-    // Prepared statement with a bound parameter
-    const char* sql = "SELECT COUNT(*) FROM campeonatos;";
+    const char* sql =
+        "SELECT COUNT(name) FROM sqlite_master "
+        "WHERE type = 'table' AND name NOT LIKE 'sqlite_%'";
     sqlite3_stmt* statement = nullptr;
 
     if (sqlite3_prepare_v2(db, sql, -1, &statement, nullptr) != SQLITE_OK) {
@@ -28,16 +30,14 @@ int main()
         return 1;
     }
 
-    // sqlite3_bind_int(stmt, 1, 0);  // first '?' = 0
-
     while (sqlite3_step(statement) == SQLITE_ROW) {
         int count = sqlite3_column_int(statement, 0);
         // const unsigned char* name = sqlite3_column_text(statement, 1);
-        std::cout << "Count of campeonatos: " << count << "\n";
+        std::cout << "Database has " << count << " tables\n";
     }
 
-    sqlite3_finalize(statement);  // always finalize statements
-    sqlite3_close(db);       // then close the connection
+    sqlite3_finalize(statement);
+    sqlite3_close(db);
 
     return 0;
 }

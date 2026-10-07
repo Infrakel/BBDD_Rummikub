@@ -1,20 +1,27 @@
-/*
-    Made it by Andreu Sánchez Castelló
-*/
+/**
+ * @file connection.cc
+ * @author Andreu Sánchez Castelló (sanchezcas@esat-alumni.com)
+ * @brief Program entry point
+ */
 
-#include <esat/window.h>
 #include <esat/draw.h>
-#include <esat/sprite.h>
 #include <esat/input.h>
+#include <esat/sprite.h>
 #include <esat/time.h>
+#include <esat/window.h>
 #include <stdio.h>
+#include <stdlib.h>
+
 #include <iostream>
 #include <memory>
 
-// Our layer class which means the connection to our server
+// Data Access layer
 #include "Database/Database.h"
 #include "Database/DatabaseLite.h"
 #include "Database/DatabaseMaria.h"
+
+// Native file dialog
+#include <nfd.h>
 
 // Our interface, we are gonna use ImGui
 #include <esat_extra/imgui.h>
@@ -40,15 +47,14 @@ char freestyle_query[2048] = {};
 // structure button
 bool show_structure = false;
 
-// now the id to delete on the delete section
+// id field name used for the delete operation
 char delete_id[20] = {};
 
-// stop load more data every frame, control flow variable
+// boolean guards to avoid multiple sql executions per frame
 bool table_data_loaded = false;
 bool columns_loaded = false;
 
 bool InitializeDB(Database* db) {
-
     if (!db->Connect()) {
         std::cerr << "[ERROR] Could not connect to our database!" << std::endl;
         return false;
@@ -60,7 +66,6 @@ bool InitializeDB(Database* db) {
 }
 
 void InitializeImgui() {
-
     ImGui::CreateContext();
 
     ImGui::SetNextWindowSize(ImVec2(windowX, windowY));
@@ -69,13 +74,12 @@ void InitializeImgui() {
     ImGui::SetNextWindowPos(ImVec2(0, 0));
 }
 
-void DrawTables(int table_count, char* tables[], char** selected_table, int& current_page) {
-
+void DrawTables(int table_count, char* tables[], char** selected_table,
+                int& current_page) {
     ImGui::Begin("Tables");
 
     for (int i = 0; i < table_count; i++) {
-
-        // buffer to change table names into a Mayus ones
+        // will store table names, in uppercase
         char button_name[256];
 
         strcpy_s(button_name, "[ ");
@@ -95,19 +99,20 @@ void DrawTables(int table_count, char* tables[], char** selected_table, int& cur
             current_page = 0;
             *selected_table = tables[i];
 
-            // if any table is showed, structure moves on
+            // selecting a table hides the structure view
             show_structure = false;
 
             // debug
             std::cout << "Selected table: " << tables[i] << std::endl;
 
-            // when user change and press any button, lose what he write
+            // cleans the inerted values in the form when the table changes
             memset(insert_values, 0, sizeof(insert_values));
             show_insert = false;
             table_data_loaded = false;
         }
     }
 
+    // Structure button
     if (ImGui::Button("[ STRUCTURE ]")) {
         show_structure = !show_structure;
     }
@@ -115,79 +120,44 @@ void DrawTables(int table_count, char* tables[], char** selected_table, int& cur
     ImGui::End();
 }
 
-void DrawInsertForm(Database& db, char* selected_table)
-{
+void DrawInsertForm(Database& db, char* selected_table) {
     if (!columns_loaded) {
-
-        column_count = db.GetTableColumns(
-            selected_table,
-            columns,
-            10
-        );
-
+        column_count = db.GetTableColumns(selected_table, columns, 10);
         columns_loaded = true;
     }
 
     // Same position as list of registries window
-    ImGui::SetNextWindowPos(
-        ImVec2(300, 0),
-        ImGuiCond_Always
-    );
+    ImGui::SetNextWindowPos(ImVec2(300, 0), ImGuiCond_Always);
 
-    ImGui::SetNextWindowSize(
-        ImVec2(500, 600),
-        ImGuiCond_Always
-    );
+    ImGui::SetNextWindowSize(ImVec2(500, 600), ImGuiCond_Always);
 
     // this have the focus now
     ImGui::SetNextWindowFocus();
+
     // 0 opacity, not registry fields located
     ImGui::SetNextWindowBgAlpha(1.0f);
 
-    ImGui::Begin(
-        "Insert",
-        &show_insert,
-        ImGuiWindowFlags_NoCollapse
-    );
+    ImGui::Begin("Insert", &show_insert, ImGuiWindowFlags_NoCollapse);
 
-    ImGui::Text(
-        "INSERT INTO %s",
-        selected_table
-    );
+    ImGui::Text("INSERT INTO %s", selected_table);
 
     ImGui::Separator();
 
     for (int i = 0; i < column_count; i++) {
-        ImGui::Text(
-            "%s (%s)",
-            columns[i].name,
-            columns[i].type
-        );
+        ImGui::Text("%s (%s)", columns[i].name, columns[i].type);
 
-        ImGui::InputText(
-            columns[i].name,
-            insert_values[i],
-            256
-        );
+        ImGui::InputText(columns[i].name, insert_values[i], 256);
     }
 
     ImGui::Separator();
 
     if (ImGui::Button("INSERT ROW")) {
-        if (db.InsertRow(
-            selected_table,
-            columns,
-            insert_values,
-            column_count)) {
-
+        if (db.InsertRow(selected_table, columns, insert_values,
+                         column_count)) {
             std::cout << "[GOOD] Row inserted!" << std::endl;
 
             // all users add, deleted it
-            memset(
-                insert_values,
-                0,
-                sizeof(insert_values)
-            );
+            memset(insert_values, 0, sizeof(insert_values));
 
             // close window when we end
             show_insert = false;
@@ -200,80 +170,45 @@ void DrawInsertForm(Database& db, char* selected_table)
     ImGui::End();
 }
 
-void DrawUpdateForm(Database& db, char* selected_table)
-{
+void DrawUpdateForm(Database& db, char* selected_table) {
     // same logic as insert
     if (!columns_loaded) {
-
-        column_count = db.GetTableColumns(
-            selected_table,
-            columns,
-            10
-        );
+        column_count = db.GetTableColumns(selected_table, columns, 10);
 
         columns_loaded = true;
     }
 
     // Same position and size as the table window
-    ImGui::SetNextWindowPos(
-        ImVec2(300, 0),
-        ImGuiCond_Always
-    );
+    ImGui::SetNextWindowPos(ImVec2(300, 0), ImGuiCond_Always);
 
-    ImGui::SetNextWindowSize(
-        ImVec2(500, 600),
-        ImGuiCond_Always
-    );
+    ImGui::SetNextWindowSize(ImVec2(500, 600), ImGuiCond_Always);
 
     // Put UPDATE window above the table
     ImGui::SetNextWindowFocus();
 
     ImGui::SetNextWindowBgAlpha(1.0f);
 
-    ImGui::Begin(
-        "Update",
-        &show_update,
-        ImGuiWindowFlags_NoCollapse
-    );
+    ImGui::Begin("Update", &show_update, ImGuiWindowFlags_NoCollapse);
 
-    ImGui::Text(
-        "UPDATE %s",
-        selected_table
-    );
+    ImGui::Text("UPDATE %s", selected_table);
 
     ImGui::Separator();
 
     // Values to update
     for (int i = 0; i < column_count; i++) {
-        ImGui::Text(
-            "%s (%s)",
-            columns[i].name,
-            columns[i].type
-        );
+        ImGui::Text("%s (%s)", columns[i].name, columns[i].type);
 
-        ImGui::InputText(
-            columns[i].name,
-            insert_values[i],
-            256
-        );
+        ImGui::InputText(columns[i].name, insert_values[i], 256);
     }
 
     ImGui::Separator();
 
     if (ImGui::Button("UPDATE ROW")) {
-        if (db.UpdateRow(
-            selected_table,
-            columns,
-            insert_values,
-            column_count
-        )) {
+        if (db.UpdateRow(selected_table, columns, insert_values,
+                         column_count)) {
             std::cout << "[GOOD] Row updated!" << std::endl;
 
-            memset(
-                insert_values,
-                0,
-                sizeof(insert_values)
-            );
+            memset(insert_values, 0, sizeof(insert_values));
 
             // ¡close window
             show_update = false;
@@ -286,78 +221,39 @@ void DrawUpdateForm(Database& db, char* selected_table)
     ImGui::End();
 }
 
-void DrawDeleteForm(Database& db, char* selected_table)
-{
+void DrawDeleteForm(Database& db, char* selected_table) {
     if (!columns_loaded) {
-
-        column_count = db.GetTableColumns(
-            selected_table,
-            columns,
-            10
-        );
+        column_count = db.GetTableColumns(selected_table, columns, 10);
 
         columns_loaded = true;
     }
 
-    ImGui::SetNextWindowPos(
-        ImVec2(300, 0),
-        ImGuiCond_Always
-    );
+    ImGui::SetNextWindowPos(ImVec2(300, 0), ImGuiCond_Always);
 
-    ImGui::SetNextWindowSize(
-        ImVec2(500, 600),
-        ImGuiCond_Always
-    );
+    ImGui::SetNextWindowSize(ImVec2(500, 600), ImGuiCond_Always);
 
     ImGui::SetNextWindowFocus();
     ImGui::SetNextWindowBgAlpha(1.0f);
 
-    ImGui::Begin(
-        "Delete",
-        &show_delete,
-        ImGuiWindowFlags_NoCollapse
-    );
+    ImGui::Begin("Delete", &show_delete, ImGuiWindowFlags_NoCollapse);
 
-    ImGui::Text(
-        "DELETE FROM %s",
-        selected_table
-    );
+    ImGui::Text("DELETE FROM %s", selected_table);
 
     ImGui::Separator();
 
-    // preselected then first column is always the primary_key
-    ImGui::Text(
-        "%s (%s)",
-        columns[0].name,
-        columns[0].type
-    );
+    // first column acts as primary_key for the delete operation
+    ImGui::Text("%s (%s)", columns[0].name, columns[0].type);
 
-    ImGui::InputText(
-        "##DeleteID",
-        delete_id,
-        256
-    );
+    ImGui::InputText("##DeleteID", delete_id, 256);
 
     ImGui::Separator();
 
     if (ImGui::Button("DELETE ROW")) {
-
-        // figure it out, then we always use a primary key instead thinking then always this will be the first one column
-        if (db.DeleteRow (
-            selected_table,
-            columns[0].name,
-            delete_id)) {
+        if (db.DeleteRow(selected_table, columns[0].name, delete_id)) {
             std::cout << "[GOOD] Row deleted!" << std::endl;
-
-            // clear always memory when we use the delete_id, just always delete this on memory
-            memset(
-                delete_id,
-                0,
-                sizeof(delete_id)
-            );
-
+            // clears id value
+            memset(delete_id, 0, sizeof(delete_id));
             show_delete = false;
-
             table_data_loaded = false;
         }
     }
@@ -366,45 +262,25 @@ void DrawDeleteForm(Database& db, char* selected_table)
 }
 
 void DrawFreestyleInput(Database& db) {
+    ImGui::SetNextWindowPos(ImVec2(300, 0), ImGuiCond_Always);
 
-    ImGui::SetNextWindowPos(
-        ImVec2(300, 0),
-        ImGuiCond_Always
-    );
-
-    ImGui::SetNextWindowSize(
-        ImVec2(500, 600),
-        ImGuiCond_Always
-    );
+    ImGui::SetNextWindowSize(ImVec2(500, 600), ImGuiCond_Always);
 
     ImGui::SetNextWindowFocus();
     ImGui::SetNextWindowBgAlpha(1.0f);
 
-    ImGui::Begin(
-        "Query",
-        &show_freestyle,
-        ImGuiWindowFlags_NoCollapse
-    );
+    ImGui::Begin("Query", &show_freestyle, ImGuiWindowFlags_NoCollapse);
 
     ImGui::Separator();
 
-    // preselected then first column is always the primary_key
-    ImGui::Text(
-        "Query to execute:"
-    );
+    ImGui::Text("Query to execute:");
 
-    // this is for make a bigger area 
-    ImGui::InputTextMultiline(
-        "##Query",
-        freestyle_query,
-        2048,
-        ImVec2(450, 200)
-    );
+    // multiline takes a bigger area in screen
+    ImGui::InputTextMultiline("##Query", freestyle_query, 2048,
+                              ImVec2(450, 200));
 
     // logic to execute the query
     if (ImGui::Button("Execute!")) {
-
-        // figure it out, then we always use a primary key instead thinking then always this will be the first one column
         std::cout << "[GOOD] Query saved!" << std::endl;
 
         show_freestyle = false;
@@ -425,70 +301,43 @@ void DrawResult(Database& db) {
 
     int column_count = 0;
 
-    int rows = db.GetFreestyleData(
-        freestyle_query,
-        column_names,
-        data,
-        50,
-        10,
-        column_count
-    );
+    int rows = db.GetFreestyleData(freestyle_query, column_names, data, 50, 10,
+                                   column_count);
 
-    ImGui::SetNextWindowPos(
-        ImVec2(300, 300),
-        ImGuiCond_Always
-    );
+    ImGui::SetNextWindowPos(ImVec2(300, 300), ImGuiCond_Always);
 
-    ImGui::SetNextWindowSize(
-        ImVec2(500, 600),
-        ImGuiCond_Always
-    );
+    ImGui::SetNextWindowSize(ImVec2(500, 600), ImGuiCond_Always);
 
-    ImGui::Begin(
-        "Query Result",
-        &show_result,
-        ImGuiWindowFlags_NoCollapse
-    );
+    ImGui::Begin("Query Result", &show_result, ImGuiWindowFlags_NoCollapse);
 
     ImGui::Text("Query result:");
 
     ImGui::Separator();
 
     if (rows > 0 && column_count > 0) {
-
         if (ImGui::BeginTable(
-            "Result",
-            column_count,
-            ImGuiTableFlags_Borders |
-            ImGuiTableFlags_RowBg
-        )) {
-
+                "Result", column_count,
+                ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
+            // Declares columns on ImGuitable
             for (int i = 0; i < column_count; i++) {
                 ImGui::TableSetupColumn(column_names[i]);
             }
 
+            // Draws header row
             ImGui::TableHeadersRow();
 
+            // Iteratively draws row data
             for (int row = 0; row < rows; row++) {
-
                 ImGui::TableNextRow();
-
                 for (int column = 0; column < column_count; column++) {
-
                     ImGui::TableSetColumnIndex(column);
-
-                    ImGui::Text(
-                        "%s",
-                        data[row][column]
-                    );
+                    ImGui::Text("%s", data[row][column]);
                 }
             }
-
             ImGui::EndTable();
         }
 
     } else {
-
         ImGui::Text("No data found.");
     }
 
@@ -500,7 +349,6 @@ void DrawResult(Database& db) {
     }
 
     for (int row = 0; row < rows; row++) {
-
         for (int column = 0; column < column_count; column++) {
             free(data[row][column]);
         }
@@ -509,9 +357,9 @@ void DrawResult(Database& db) {
     }
 }
 
-void DrawSelectedTableData(Database& db, char* selected_table, int& current_page, int& rows_per_page) {
-
-    // control flow variable
+void DrawSelectedTableData(Database& db, char* selected_table,
+                           int& current_page, int& rows_per_page) {
+    // prevents multiple sql statements in same framw
     if (!table_data_loaded) {
         char* column_names[10];
 
@@ -523,11 +371,7 @@ void DrawSelectedTableData(Database& db, char* selected_table, int& current_page
 
         // check this to know which columns and type for the insert and update
         ColumnInfo columns[10];
-        int info_column_count = db.GetTableColumns(
-            selected_table,
-            columns,
-            10
-        );
+        int info_column_count = db.GetTableColumns(selected_table, columns, 10);
 
         // How many rows exist in the table
         int total_rows = db.GetTableRowCount(selected_table);
@@ -542,15 +386,8 @@ void DrawSelectedTableData(Database& db, char* selected_table, int& current_page
         // Calculate the offset depending on the current page
         int offset = current_page * rows_per_page;
 
-        int rows = db.GetTableData(
-            selected_table,
-            column_names,
-            data,
-            rows_per_page,
-            10,
-            offset,
-            column_count
-        );
+        int rows = db.GetTableData(selected_table, column_names, data,
+                                   rows_per_page, 10, offset, column_count);
 
         // Settings to take at right place all the window created right now
         ImGui::SetNextWindowPos(ImVec2(300, 0), ImGuiCond_FirstUseEver);
@@ -564,32 +401,26 @@ void DrawSelectedTableData(Database& db, char* selected_table, int& current_page
 
         if (rows > 0 && column_count > 0) {
             if (ImGui::BeginTable(
-                "TableData",
-                column_count,
-                ImGuiTableFlags_Borders |
-                ImGuiTableFlags_RowBg)) {
-                // Column as a header
+                    "TableData", column_count,
+                    ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
+                // Declares column of ImGui table
                 for (int i = 0; i < column_count; i++) {
                     ImGui::TableSetupColumn(column_names[i]);
                 }
 
+                // Draws header row
                 ImGui::TableHeadersRow();
 
-                // data manipulated
-
+                // Iteratively draws row data
                 for (int row = 0; row < rows; row++) {
                     ImGui::TableNextRow();
 
                     for (int column = 0; column < column_count; column++) {
                         ImGui::TableSetColumnIndex(column);
 
-                        ImGui::Text(
-                            "%s",
-                            data[row][column]
-                        );
+                        ImGui::Text("%s", data[row][column]);
                     }
                 }
-
                 ImGui::EndTable();
             }
         } else {
@@ -624,12 +455,12 @@ void DrawSelectedTableData(Database& db, char* selected_table, int& current_page
 
         ImGui::Separator();
 
-        // What we want to do in future
+        // Toolbar
 
         if (ImGui::Button("INSERT")) {
             show_insert = !show_insert;
 
-            if (show_insert){
+            if (show_insert) {
                 columns_loaded = false;
             }
         }
@@ -670,7 +501,6 @@ void DrawSelectedTableData(Database& db, char* selected_table, int& current_page
         ImGui::SameLine();
 
         if (ImGui::Button("QUERY")) {
-
             std::cout << "QUERY BUTTON PRESSED!" << std::endl;
 
             show_freestyle = true;
@@ -680,24 +510,15 @@ void DrawSelectedTableData(Database& db, char* selected_table, int& current_page
             show_update = false;
             show_delete = false;
 
-            memset(
-                freestyle_query,
-                0,
-                sizeof(freestyle_query)
-            );
+            memset(freestyle_query, 0, sizeof(freestyle_query));
 
             // set default query using the selected_table
-            sprintf_s(
-                freestyle_query,
-                "SELECT * FROM `%s`",
-                selected_table
-            );
+            sprintf_s(freestyle_query, "SELECT * FROM `%s`", selected_table);
         }
 
         ImGui::End();
 
         // Free memory
-
         for (int i = 0; i < column_count; i++) {
             free(column_names[i]);
         }
@@ -712,18 +533,11 @@ void DrawSelectedTableData(Database& db, char* selected_table, int& current_page
     }
 }
 
-void DrawStructure(Database& db, int table_count, char* tables[])
-{
+void DrawStructure(Database& db, int table_count, char* tables[]) {
     // no entry on .ini file of IMGUI, thats why we use ImGuiCond_FirstUseEver
-    ImGui::SetNextWindowPos(
-        ImVec2(300, 0),
-        ImGuiCond_FirstUseEver
-    );
+    ImGui::SetNextWindowPos(ImVec2(300, 0), ImGuiCond_FirstUseEver);
 
-    ImGui::SetNextWindowSize(
-        ImVec2(500, 600),
-        ImGuiCond_FirstUseEver
-    );
+    ImGui::SetNextWindowSize(ImVec2(500, 600), ImGuiCond_FirstUseEver);
 
     ImGui::Begin("Structure");
 
@@ -732,22 +546,13 @@ void DrawStructure(Database& db, int table_count, char* tables[])
     ImGui::Separator();
 
     // scroll, needed because we have a lot of tables
-    ImGui::BeginChild(
-        "StructureScroll",
-        ImVec2(0, 0),
-        true
-    );
+    ImGui::BeginChild("StructureScroll", ImVec2(0, 0), true);
 
     // all tables
     for (int i = 0; i < table_count; i++) {
-
         ColumnInfo columns[10];
 
-        int column_count = db.GetTableColumns(
-            tables[i],
-            columns,
-            10
-        );
+        int column_count = db.GetTableColumns(tables[i], columns, 10);
 
         // table names
         ImGui::Text("%s", tables[i]);
@@ -756,12 +561,7 @@ void DrawStructure(Database& db, int table_count, char* tables[])
 
         // column's name
         for (int j = 0; j < column_count; j++) {
-
-            ImGui::Text(
-                "    %s (%s)",
-                columns[j].name,
-                columns[j].type
-            );
+            ImGui::Text("    %s (%s)", columns[j].name, columns[j].type);
         }
 
         // space between table, more design
@@ -774,52 +574,101 @@ void DrawStructure(Database& db, int table_count, char* tables[])
     ImGui::End();
 }
 
-std::unique_ptr<Database> SelectDatabase()
-{
+/**
+ * @brief Opens a dialog to select a datbase file from the file system
+ *
+ * @return nfdu8char_t* Full path to the selected file
+ */
+nfdu8char_t* PickDatabaseFile() {
+    if (NFD_Init() != NFD_OKAY) {
+        return nullptr;
+    }
+    char* defaultPath = _fullpath(nullptr, ".", _MAX_PATH);
+    nfdu8char_t* outPath = nullptr;
+    nfdu8filteritem_t filters[1] = {{"Database file", "db"}};
+    nfdopendialogu8args_t args = {0};
+    args.filterList = filters;
+    args.filterCount = 1;
+    args.title = "Select Database File";
+    args.defaultPath = defaultPath;
+    nfdresult_t result = NFD_OpenDialogU8_With(&outPath, &args);
+    if (result == NFD_OKAY) {
+        std::cout << "Database file selected: " << outPath << std::endl;
+    } else if (result == NFD_CANCEL) {
+        outPath = nullptr;
+    } else {
+        std::cout << "[ERROR] Could not pick file: " << NFD_GetError()
+                  << std::endl;
+        outPath = nullptr;
+    }
+    NFD_Quit();
+    return outPath;
+}
+
+/**
+ * @brief Database provider selector
+ *
+ * @return `int` menu choice, ensures valid option is chosen
+ */
+int SelectDatabase() {
     std::cout << "Select a database provider:\n"
-            << "  [1] MariaDB\n"
-            << "  [2] SQLite (./SQLite/rummi.db)\n"
-            << "  [0] Quit\n"
-            << "> ";
-    std::unique_ptr<Database> database = nullptr;
+              << "  [1] MariaDB\n"
+              << "  [2] SQLite\n"
+              << "  [0] Quit\n"
+              << "> ";
+
     int choice;
     bool correctInput;
     bool validOption;
-    do{
+    do {
         validOption = true;
-        correctInput = (bool) (std::cin >> choice);
+        correctInput = (bool)(std::cin >> choice);
         if (!correctInput) {
-            std::cin.clear();
+            std::cin.clear();  // clears cin bit flags
             std::cout << "Please enter a number.\n> ";
+        } else if (choice < 0 || choice > 2) {
+            std::cout << "Invalid option.\n> ";
+            validOption = false;
         }
-        else{
-            switch (choice) {
-                case 1: 
-                    database = std::make_unique<MariaDBDatabase>();
-                    break;
-                case 2: 
-                    database = std::make_unique<SQLiteDatabase>();
-                    break;
-                case 0:
-                    database = nullptr;
-                    break;
-                default: 
-                    std::cout << "Invalid option.\n> ";
-                    validOption = false;
-            }
-        }
-        // clear the input buffer
+        // clear the input buffer (ignores rest of tokens)
         std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-    }while(!correctInput || !validOption);
+    } while (!correctInput || !validOption);
 
-    return database;
+    return choice;
 }
 
-int esat::main(int argc, char **argv) {
-    std::unique_ptr<Database> dbptr = SelectDatabase();
-    if(!dbptr){
-        return 0;
-    }
+int esat::main(int argc, char** argv) {
+    // Database selection
+    Database* dbptr;
+    nfdu8char_t* sqlitePath;
+    int menuSelection;
+    bool valid = true;
+    do {
+        valid = true;
+        menuSelection = SelectDatabase();
+        switch (menuSelection) {
+            // sets up MariaDB connection
+            case 1:
+                dbptr = new MariaDBDatabase();
+                break;
+            // sets up sqlitePath, with a file picker
+            case 2:
+                sqlitePath = PickDatabaseFile();
+                if (sqlitePath) {
+                    dbptr = new SQLiteDatabase(strdup(sqlitePath));
+                    NFD_FreePathU8(sqlitePath);
+                } else {
+                    std::cerr
+                        << "[ERROR] Must pick a valid SQLite database file"
+                        << std::endl;
+                    valid = false;
+                }
+                break;
+            // exits program
+            case 0:
+                return 0;
+        }
+    } while (menuSelection < 0 || menuSelection > 2 || !valid);
     Database& db = *dbptr;
     bool isConnected = InitializeDB(&db);
 
@@ -843,7 +692,8 @@ int esat::main(int argc, char **argv) {
 
     InitializeImgui();
 
-    while (esat::WindowIsOpened() && !esat::IsSpecialKeyDown(esat::kSpecialKey_Escape)) {
+    while (esat::WindowIsOpened() &&
+           !esat::IsSpecialKeyDown(esat::kSpecialKey_Escape)) {
         last_time = esat::Time();
 
         esat::DrawBegin();
@@ -852,7 +702,8 @@ int esat::main(int argc, char **argv) {
         DrawTables(table_count, tables, &selected_table, current_page);
 
         if (selected_table != nullptr) {
-            DrawSelectedTableData(db, selected_table, current_page, rows_per_page);
+            DrawSelectedTableData(db, selected_table, current_page,
+                                  rows_per_page);
         }
 
         if (show_insert && selected_table != nullptr) {
@@ -872,7 +723,8 @@ int esat::main(int argc, char **argv) {
             DrawStructure(db, table_count, tables);
         }
 
-        // this both below is for show the input of a query and then their result
+        // this both below is for show the input of a query and then their
+        // result
         if (show_freestyle && selected_table != nullptr) {
             DrawFreestyleInput(db);
         }
@@ -883,12 +735,14 @@ int esat::main(int argc, char **argv) {
 
         esat::DrawEnd();
 
-        do { current_time = esat::Time(); }
-        while ((current_time - last_time) <= 1000.0 / fps);
+        do {
+            current_time = esat::Time();
+        } while ((current_time - last_time) <= 1000.0 / fps);
 
         esat::WindowFrame();
     }
 
     esat::WindowDestroy();
+    delete dbptr;
     return 0;
 }
