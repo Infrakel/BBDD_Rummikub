@@ -21,6 +21,9 @@ cl /nologo /Zi /GR- /EHs /MD ^
   .\MariaDB\lib\libmariadb.lib ^
   opengl32.lib user32.lib gdi32.lib shell32.lib Ws2_32.lib comctl32.lib ole32.lib
 
+@REM We need to include this copy, so that it works with the x86 binary
+copy /Y ".\MariaDB\lib\libmariadb.dll" "."
+
 @echo ---------------------------------------------------
 @echo  Batch script finished
 @echo ---------------------------------------------------
